@@ -1,0 +1,220 @@
+/* Three fixed columns: Sites, Fail2ban, Incidents (1:1:2). */
+
+.board-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.monitor-board {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  height: auto;
+  gap: var(--grid-gap);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.monitor-tile.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.monitor-tile {
+  position: relative;
+  box-sizing: border-box;
+  width: auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  cursor: default;
+}
+
+.monitor-tile__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.monitor-tile__title {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monitor-tile__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: auto;
+}
+
+.status-beacon {
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(
+    circle at 38% 32%,
+    color-mix(in srgb, var(--text-primary) 28%, transparent) 0%,
+    transparent 42%
+  );
+}
+
+.status-beacon--init,
+.status-beacon--stale {
+  background-color: var(--beacon-stale-core);
+  opacity: 0.35;
+  box-shadow: none;
+}
+
+.status-beacon--ok {
+  background-color: var(--beacon-ok-core);
+  box-shadow:
+    0 0 var(--space-2) var(--beacon-ok-glow),
+    0 0 var(--space-4) var(--beacon-ok-glow-soft),
+    inset 0 0 var(--space-3) color-mix(in srgb, var(--text-primary) 12%, transparent);
+  animation: beaconCalm 2.8s ease-in-out infinite;
+}
+
+.status-beacon--warn {
+  background-color: var(--beacon-amber-core);
+  box-shadow:
+    0 0 var(--space-2) var(--beacon-amber-glow),
+    0 0 var(--space-4) color-mix(in srgb, var(--beacon-amber-glow) 55%, transparent),
+    inset 0 0 var(--space-3) color-mix(in srgb, var(--text-primary) 10%, transparent);
+  animation: beaconCalm 1.8s ease-in-out infinite;
+}
+
+.status-beacon--alarm {
+  background-color: var(--beacon-alarm-core);
+  box-shadow:
+    0 0 var(--space-3) var(--beacon-alarm-glow),
+    0 0 var(--space-5) var(--beacon-alarm-glow),
+    0 0 var(--space-6) var(--beacon-alarm-halo),
+    inset 0 0 var(--space-2) color-mix(in srgb, var(--signal) 35%, transparent);
+  animation:
+    beaconSiren 0.42s ease-in-out infinite,
+    beaconFlicker 0.11s steps(2, end) infinite;
+}
+
+.header-status-orb.status-beacon--ok,
+.header-status-orb.status-beacon--warn {
+  box-shadow:
+    0 0 4px var(--beacon-ok-glow),
+    inset 0 0 3px color-mix(in srgb, var(--text-primary) 12%, transparent);
+}
+
+.header-status-orb.status-beacon--warn {
+  box-shadow:
+    0 0 4px var(--beacon-amber-glow),
+    inset 0 0 3px color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+.header-status-orb.status-beacon--alarm {
+  box-shadow:
+    0 0 5px var(--beacon-alarm-glow),
+    inset 0 0 2px color-mix(in srgb, var(--signal) 35%, transparent);
+}
+
+.tile--table .monitor-tile__body {
+  overflow: auto;
+}
+
+.tile-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.tile-table th,
+.tile-table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+  border-bottom: var(--border-hairline);
+}
+
+.tile-table th {
+  color: var(--text-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.tile-table td {
+  color: var(--text-secondary);
+}
+
+.monitor-tile__meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  word-break: break-word;
+}
+
+.monitor-tile__meta--stale {
+  color: var(--signal);
+}
+
+.header-logout-form {
+  display: contents;
+}
+
+.header-actions-primary a.btn,
+.header-actions-primary button.btn {
+  text-decoration: none;
+}
+
+.header .logo {
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.header .logo-mark {
+  width: var(--logo-mark-w);
+  height: var(--logo-mark-h);
+  max-width: var(--logo-mark-w);
+  max-height: var(--logo-mark-h);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.header .logo-wordmark {
+  padding-bottom: 0;
+}
+
+@media (max-width: 48rem) {
+  .monitor-board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--grid-gap);
+    min-height: auto;
+    height: auto;
+    flex: none;
+  }
+
+  .monitor-tile {
+    position: relative;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 12rem;
+    cursor: default;
+    touch-action: auto;
+  }
+
+  .board-wrap {
+    overflow: auto;
+  }
+}

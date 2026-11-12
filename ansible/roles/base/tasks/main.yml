@@ -1,0 +1,87 @@
+---
+- name: Refresh apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Full system upgrade
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+  when: upgrade_packages | bool
+  tags:
+    - upgrade_packages
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - ufw
+      - htop
+      - unattended-upgrades
+      - apt-listchanges
+    state: present
+
+- name: Set ufw default policies
+  ansible.builtin.command:
+    cmd: "ufw default {{ item.policy }} {{ item.direction }}"
+  loop:
+    - { policy: deny, direction: incoming }
+    - { policy: allow, direction: outgoing }
+  changed_when: false
+
+- name: Allow public TCP services through ufw
+  ansible.builtin.command:
+    cmd: "ufw allow {{ item }}/tcp comment public-access"
+  loop: "{{ ufw_allowed_tcp_ports | unique }}"
+  register: ufw_allow_rules
+  changed_when: ufw_allow_rules.stdout is search('Rule added')
+  failed_when: ufw_allow_rules.rc != 0
+
+- name: Allow Docker bridge networks to reach Docker metrics
+  ansible.builtin.command:
+    cmd: ufw allow from 172.16.0.0/12 to any port 9323 proto tcp comment docker-metrics
+  register: ufw_docker_metrics
+  changed_when: ufw_docker_metrics.stdout is search('Rule added')
+  failed_when: ufw_docker_metrics.rc != 0
+
+- name: Allow paired hosts restricted service access through ufw
+  ansible.builtin.command:
+    cmd: >-
+      ufw allow from {{ item.from }} to any port {{ item.port }}
+      proto {{ item.proto }} comment {{ item.comment }}
+  loop: "{{ ufw_allowed_from_hosts }}"
+  register: ufw_paired_hosts
+  changed_when: ufw_paired_hosts.stdout is search('Rule added')
+  failed_when: ufw_paired_hosts.rc != 0
+
+- name: Enable ufw
+  ansible.builtin.command:
+    cmd: ufw --force enable
+  register: ufw_enable
+  changed_when: ufw_enable.stdout is search('Firewall is active and enabled')
+  failed_when: ufw_enable.rc != 0
+
+- name: Set system timezone
+  ansible.builtin.file:
+    src: "/usr/share/zoneinfo/{{ system_timezone }}"
+    dest: /etc/localtime
+    state: link
+    force: true
+
+- name: Enable unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+
+- name: Enable unattended-upgrades service
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    enabled: true
+    state: started

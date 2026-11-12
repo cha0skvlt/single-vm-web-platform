@@ -1,0 +1,22 @@
+{
+  "tiles": [
+    {
+      "id": "sites",
+      "kind": "table",
+      "variant": "sites",
+      "title": "Sites"
+    },
+    {
+      "id": "fail2ban",
+      "kind": "table",
+      "variant": "fail2ban",
+      "title": "Fail2ban"
+    },
+    {
+      "id": "incidents",
+      "kind": "table",
+      "variant": "incidents",
+      "title": "Incidents"
+    }
+  ]
+}

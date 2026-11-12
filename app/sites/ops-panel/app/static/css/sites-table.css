@@ -1,0 +1,28 @@
+/* SITES-1 — domain / status table (design tokens only) */
+
+.tile-table--sites .site-domain-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.tile-table--sites .site-domain-link:hover {
+  color: var(--text-primary);
+}
+
+.site-status {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: lowercase;
+}
+
+.site-status--up {
+  color: var(--beacon-ok-core);
+}
+
+.site-status--down {
+  color: var(--signal);
+}
+
+.site-status--unknown {
+  color: var(--text-muted);
+}

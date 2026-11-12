@@ -1,0 +1,39 @@
+# Ansible-rendered — keep in sync with app/.env on the server.
+http:
+  middlewares:
+    prod-session-forward:
+      forwardAuth:
+        address: http://ops-panel:8080/auth/verify
+        trustForwardHeader: false
+        maxBodySize: 8192
+        maxResponseBodySize: 8192
+        authRequestHeaders:
+          - Cookie
+          - Accept
+    grafana-proxy-user:
+      headers:
+        customRequestHeaders:
+          X-WEBAUTH-USER: panel
+    prod-headers:
+      headers:
+        sslRedirect: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+          X-Forwarded-Host: {{ prod_public_host | default('status.example.com') }}
+    strip-traefik-prefix:
+      stripPrefix:
+        prefixes:
+          - /traefik
+    strip-pma-prefix:
+      stripPrefix:
+        prefixes:
+          - /pma

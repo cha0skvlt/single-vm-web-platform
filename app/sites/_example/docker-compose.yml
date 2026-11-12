@@ -1,0 +1,55 @@
+services:
+  example-web:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Site code lands here via GitLab CD: runner rsyncs the repo to var/site-src/<fqdn>.
+      - ../../../var/site-src/_example.local:/usr/share/nginx/html:ro
+    networks:
+      - web
+      - example-internal
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - stack.site=example
+      - stack.role=nginx
+      # Let's Encrypt (HTTP-01). For a purchased cert: remove certresolver=le
+      # and add PEM under app/certs/<domain>/ (file provider).
+      - traefik.http.routers.example.rule=Host(`_example.local`)
+      - traefik.http.routers.example.entrypoints=websecure
+      - traefik.http.routers.example.tls=true
+      - traefik.http.routers.example.tls.certresolver=le
+      - traefik.http.services.example.loadbalancer.server.port=80
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  example-nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.5.0
+    restart: unless-stopped
+    command:
+      - -nginx.scrape-uri=http://example-web:8080/stub_status
+    networks:
+      - web
+      - example-internal
+    depends_on:
+      - example-web
+    labels:
+      - stack.site=example
+      - stack.role=nginx-exporter
+      - stack.scrape=true
+      - stack.scrape_port=9113
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 64M
+
+networks:
+  web:
+    external: true
+  example-internal:
+    driver: bridge

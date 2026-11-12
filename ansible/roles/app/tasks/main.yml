@@ -1,0 +1,360 @@
+---
+- name: Add deploy user to docker group
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: docker
+    append: true
+  register: deploy_docker_group
+
+- name: Reset SSH connection after docker group change
+  ansible.builtin.meta: reset_connection
+
+- name: Check web docker network
+  ansible.builtin.command:
+    cmd: docker network inspect web
+  register: web_network
+  changed_when: false
+  failed_when: false
+
+- name: Create web docker network
+  ansible.builtin.command:
+    cmd: docker network create web
+  when: web_network.rc != 0
+  changed_when: true
+
+- name: Apply DOCKER-USER isolation after web network exists
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/docker-user-isolation.sh
+  changed_when: false
+
+- name: Ensure Traefik access log directory on host
+  ansible.builtin.file:
+    path: "{{ traefik_access_log_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure Traefik access log file exists for fail2ban
+  ansible.builtin.file:
+    path: "{{ traefik_access_log_path }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure app install directory
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Check local app/.env exists on controller
+  ansible.builtin.stat:
+    path: "{{ app_src }}/.env"
+  delegate_to: localhost
+  become: false
+  register: app_env_local
+  run_once: true
+
+- name: Abort when app/.env is missing locally
+  ansible.builtin.fail:
+    msg: "Create app/.env from app/.env.example on the workstation before deploy."
+  when: not app_env_local.stat.exists
+
+- name: Sync app stack files to server
+  ansible.posix.synchronize:
+    src: "{{ app_src }}/"
+    dest: "{{ app_install_dir }}/"
+    delete: true
+    rsync_opts: "{{ app_rsync_excludes }}"
+  notify: Redeploy app stack
+
+- name: Sync diagnostic scripts (LOG-3)
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/../scripts/"
+    dest: "/opt/{{ hostname }}/scripts/"
+    delete: true
+    rsync_opts: "{{ scripts_rsync_excludes }}"
+
+# Site CD: rsync target for site code.
+- name: Ensure site sources directory (GitLab CD rsync target)
+  ansible.builtin.file:
+    path: "/opt/{{ hostname }}/var/site-src"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0755"
+
+- name: Resolve local git revision
+  ansible.builtin.command:
+    argv: [git, -C, "{{ playbook_dir }}/..", rev-parse, HEAD]
+  delegate_to: localhost
+  become: false
+  run_once: true
+  register: deploy_sha_cmd
+  changed_when: false
+  failed_when: false
+
+- name: Record deployed git revision on server
+  ansible.builtin.copy:
+    dest: "{{ app_install_dir | dirname }}/.deploy-sha"
+    content: "{{ deploy_sha_cmd.stdout if deploy_sha_cmd.rc == 0 else 'unknown' }}\n"
+    mode: "0644"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+
+- name: Remove legacy frontend borrow directory at install root
+  ansible.builtin.file:
+    path: "/opt/{{ hostname }}/frontend"
+    state: absent
+
+- name: Ensure Traefik dynamic and certs directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0750"
+  loop:
+    - "{{ app_install_dir }}/traefik/dynamic"
+    - "{{ app_install_dir }}/certs"
+
+- name: Render Traefik shared middlewares (file provider)
+  ansible.builtin.template:
+    src: middlewares.yml.j2
+    dest: "{{ app_install_dir }}/traefik/dynamic/middlewares.yml"
+    mode: "0644"
+  notify: Redeploy app stack
+
+# No self-signed certs: real domains use Let's Encrypt (certresolver=le) or a
+# purchased cert (file provider); unconfigured hosts fall back to Traefik's
+# built-in default certificate. Remove any self-signed material from earlier deploys.
+- name: Remove legacy self-signed certificate directories
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}/certs/{{ item }}"
+    state: absent
+  loop:
+    - _default
+    - _example.local
+
+- name: Remove legacy self-signed default TLS store
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}/traefik/dynamic/certs.yml"
+    state: absent
+  notify: Redeploy app stack
+
+- name: Remove legacy _example.local Traefik TLS config
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}/traefik/dynamic/_example.local.yml"
+    state: absent
+  notify: Redeploy app stack
+
+- name: Discover TLS certificate directories on server
+  ansible.builtin.find:
+    paths: "{{ app_install_dir }}/certs"
+    patterns: fullchain.pem
+    recurse: true
+  register: app_tls_fullchains
+
+- name: Set Traefik file-provider domain list from deployed certs
+  ansible.builtin.set_fact:
+    traefik_tls_file_cert_domains: "{{ app_tls_domains | sort }}"
+  vars:
+    app_tls_domains: >-
+      {{
+        app_tls_fullchains.files
+        | map(attribute='path')
+        | map('dirname')
+        | map('basename')
+        | reject('equalto', '_default')
+        | unique
+        | list
+      }}
+
+- name: Remove legacy aggregated Traefik TLS config
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}/traefik/dynamic/certs.domains.yml"
+    state: absent
+
+- name: Render Traefik per-domain TLS configuration
+  ansible.builtin.template:
+    src: domain-cert.yml.j2
+    dest: "{{ app_install_dir }}/traefik/dynamic/{{ item }}.yml"
+    mode: "0644"
+  loop: "{{ traefik_tls_file_cert_domains }}"
+  notify: Redeploy app stack
+
+- name: Pick wildcard TLS domain for default store
+  ansible.builtin.set_fact:
+    traefik_tls_default_domain: "{{ traefik_tls_file_cert_domains | reject('equalto', '_example.local') | first | default('') }}"
+
+- name: Render Traefik default TLS store from wildcard cert
+  ansible.builtin.template:
+    src: certs-default.yml.j2
+    dest: "{{ app_install_dir }}/traefik/dynamic/certs-default.yml"
+    mode: "0644"
+  when: traefik_tls_default_domain | length > 0
+  notify: Redeploy app stack
+
+- name: Remove Traefik default TLS override when no purchased cert
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}/traefik/dynamic/certs-default.yml"
+    state: absent
+  when: traefik_tls_default_domain | length == 0
+  notify: Redeploy app stack
+
+- name: Check app environment file on server
+  ansible.builtin.stat:
+    path: "{{ app_install_dir }}/.env"
+  register: remote_app_env
+
+- name: Deploy app environment file
+  ansible.builtin.copy:
+    src: "{{ app_src }}/.env"
+    dest: "{{ app_install_dir }}/.env"
+    mode: "0600"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+  when: app_env_push | default(false) | bool or not remote_app_env.stat.exists
+  notify: Redeploy app stack
+
+- name: Set app directory ownership
+  ansible.builtin.file:
+    path: "{{ app_install_dir }}"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    recurse: true
+
+- name: Resolve docker group GID on server
+  ansible.builtin.command: getent group docker
+  register: app_docker_group_ent
+  changed_when: false
+
+- name: Sync DOCKER_GID for Prometheus docker socket access
+  ansible.builtin.lineinfile:
+    path: "{{ app_install_dir }}/.env"
+    regexp: '^DOCKER_GID='
+    line: "DOCKER_GID={{ app_docker_group_ent.stdout.split(':')[2] }}"
+    mode: "0600"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+  notify: Redeploy app stack
+
+- name: Flush handlers to apply base stack
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until MySQL is healthy
+  ansible.builtin.command:
+    cmd: docker inspect --format '{% raw %}{{.State.Health.Status}}{% endraw %}' mysql
+  register: mysql_health
+  until: mysql_health.stdout == "healthy"
+  retries: 30
+  delay: 4
+  changed_when: false
+
+- name: Provision MySQL exporter user
+  ansible.builtin.command:
+    argv:
+      - "/opt/{{ hostname }}/scripts/db-provision.sh"
+      - "--provision-exporter"
+  become: true
+  register: db_provision_exporter
+  changed_when: false
+
+- name: Provision shared MySQL databases and users for sites
+  ansible.builtin.command:
+    argv:
+      - "/opt/{{ hostname }}/scripts/db-provision.sh"
+      - "--all"
+  become: true
+  register: db_provision_all
+  changed_when: false
+
+- name: Compute ops-panel image build hash
+  ansible.builtin.command:
+    argv:
+      - sh
+      - -c
+      - >-
+        cd sites/ops-panel &&
+        find . -type f ! -name '.build-hash' | sort | xargs sha256sum | sha256sum | awk '{print $1}'
+    chdir: "{{ app_install_dir }}"
+  become: true
+  register: ops_panel_build_hash_cmd
+  changed_when: false
+
+- name: Read stored ops-panel build hash
+  ansible.builtin.slurp:
+    src: "{{ ops_panel_build_hash_file }}"
+  register: ops_panel_build_hash_remote
+  failed_when: false
+
+- name: Set ops-panel build hash facts
+  ansible.builtin.set_fact:
+    ops_panel_build_hash_current: "{{ ops_panel_build_hash_cmd.stdout | trim }}"
+    ops_panel_build_hash_stored: >-
+      {{
+        (ops_panel_build_hash_remote.content | b64decode | trim)
+        if ops_panel_build_hash_remote.content is defined
+        else ''
+      }}
+
+- name: Deploy ops-panel site stack (rebuild when context changed)
+  ansible.builtin.command:
+    cmd: docker compose --env-file .env -f sites/ops-panel/docker-compose.yml up -d --build
+    chdir: "{{ app_install_dir }}"
+  become: true
+  when: ops_panel_build_hash_current != ops_panel_build_hash_stored
+  register: prod_status_compose_build
+  changed_when: >-
+    prod_status_compose_build.rc == 0 and
+    ((prod_status_compose_build.stdout | default('')) + (prod_status_compose_build.stderr | default('')))
+    is search('(?i)(created|recreated|started|pulled|replaced|built)')
+
+- name: Deploy ops-panel site stack (no rebuild)
+  ansible.builtin.command:
+    cmd: docker compose --env-file .env -f sites/ops-panel/docker-compose.yml up -d
+    chdir: "{{ app_install_dir }}"
+  become: true
+  when: ops_panel_build_hash_current == ops_panel_build_hash_stored
+  register: prod_status_compose
+  changed_when: >-
+    prod_status_compose.rc == 0 and
+    ((prod_status_compose.stdout | default('')) + (prod_status_compose.stderr | default('')))
+    is search('(?i)(created|recreated|started|pulled|replaced)')
+
+- name: Store ops-panel build hash after rebuild
+  ansible.builtin.copy:
+    dest: "{{ ops_panel_build_hash_file }}"
+    content: "{{ ops_panel_build_hash_current }}\n"
+    mode: "0644"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+  when: ops_panel_build_hash_current != ops_panel_build_hash_stored
+
+- name: Ensure Traefik access log file exists after stack deploy
+  ansible.builtin.file:
+    path: "{{ traefik_access_log_path }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Restart fail2ban after Traefik log path is ready
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: restarted
+
+- name: Verify fail2ban is running
+  ansible.builtin.command:
+    cmd: fail2ban-client ping
+  changed_when: false
+  register: fail2ban_ping
+  failed_when: fail2ban_ping.rc != 0
+
+- name: Apply DOCKER-USER isolation after stacks are up
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/docker-user-isolation.sh
+  changed_when: false

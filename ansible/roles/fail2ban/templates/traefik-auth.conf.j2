@@ -1,0 +1,9 @@
+# Traefik JSON access logs — POST /login with HTTP 401 (bad credentials) or 429 (rate limit).
+# Reads Traefik accessLog.filePath (not all Docker container logs).
+
+[Definition]
+
+# Traefik accessLog JSON field order varies; use lookaheads (DownstreamStatus often precedes RequestMethod).
+failregex = ^\{.*"ClientHost":"<ADDR>"(?=.*"RequestMethod":"POST")(?=.*"RequestPath":"/login")(?=.*"DownstreamStatus":(?:401|429)).*
+
+ignoreregex =

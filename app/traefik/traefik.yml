@@ -1,0 +1,56 @@
+api:
+  dashboard: true
+  # Bound to platform IP only (entryPoint traefik). ops-panel uses http://traefik:8080.
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+  metrics:
+    address: ":8082"
+  traefik:
+    address: "172.28.10.6:8080"
+
+ping: {}
+
+providers:
+  docker:
+    endpoint: "tcp://docker-socket-proxy:2375"
+    exposedByDefault: false
+    network: web
+  file:
+    directory: /etc/traefik/dynamic
+    watch: false
+
+certificatesResolvers:
+  le:
+    acme:
+      storage: /acme/acme.json
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: WARN
+  format: json
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: json
+  fields:
+    headers:
+      defaultMode: keep
+      names:
+        Authorization: drop
+        Cookie: drop
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addRoutersLabels: true

@@ -1,0 +1,38 @@
+services:
+  example-node:
+    build:
+      context: ../../../var/site-src/_example.local
+      # Bake resolves dockerfile from context (site-src), not the slot dir.
+      dockerfile: ../../../app/sites/_example.local/node/Dockerfile
+    image: example-node:18
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: "0.0.0.0"
+      PORT: "3000"
+    networks:
+      - web
+      - example-internal
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - stack.site=example
+      - stack.role=node
+      # Let's Encrypt (HTTP-01). For a purchased cert: remove certresolver=le
+      # and add PEM under app/certs/<domain>/ (file provider).
+      - traefik.http.routers.example.rule=Host(`_example.local`)
+      - traefik.http.routers.example.entrypoints=websecure
+      - traefik.http.routers.example.tls=true
+      - traefik.http.routers.example.tls.certresolver=le
+      - traefik.http.services.example.loadbalancer.server.port=3000
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+networks:
+  web:
+    external: true
+  example-internal:
+    driver: bridge

@@ -1,0 +1,178 @@
+// LOG-2 — collect docker + journald, normalize labels for LOG-1 schema, push to Loki
+
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+loki.write "default" {
+  endpoint {
+    url        = "http://loki:3100/loki/api/v1/push"
+    batch_wait = "1s"
+    batch_size = "1MiB"
+  }
+  external_labels = {
+    host = "web",
+  }
+}
+
+discovery.docker "linux" {
+  host = "tcp://docker-socket-proxy:2375"
+}
+
+discovery.relabel "docker" {
+  targets = discovery.docker.linux.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "(.+)"
+    target_label  = "service"
+    replacement   = "${1}"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?mysql$"
+    target_label  = "service"
+    replacement   = "mysql"
+  }
+
+  rule {
+    target_label = "level"
+    replacement  = "info"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "tcp://docker-socket-proxy:2375"
+  targets    = discovery.relabel.docker.output
+  forward_to = [loki.process.normalize.receiver]
+}
+
+loki.relabel "journal" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    regex         = "(.+)\\.service"
+    target_label  = "service"
+    replacement   = "${1}"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    regex         = "(.+)"
+    target_label  = "service"
+    replacement   = "${1}"
+  }
+
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    regex         = "(emerg|alert|crit|error)"
+    target_label  = "level"
+    replacement   = "error"
+  }
+
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    regex         = "warning"
+    target_label  = "level"
+    replacement   = "warn"
+  }
+
+  rule {
+    target_label = "level"
+    replacement  = "info"
+  }
+}
+
+loki.source.journal "host" {
+  forward_to    = [loki.process.normalize.receiver]
+  relabel_rules = loki.relabel.journal.rules
+  max_age       = "168h"
+}
+
+// fail2ban host log (Ban/Unban lines for panel tile + Grafana)
+local.file_match "fail2ban_log" {
+  path_targets = [{
+    __path__ = "/var/log/fail2ban.log",
+    job      = "fail2ban",
+  }]
+}
+
+loki.relabel "fail2ban_file" {
+  forward_to = [loki.process.normalize.receiver]
+
+  rule {
+    target_label = "service"
+    replacement  = "fail2ban"
+  }
+
+  rule {
+    target_label = "level"
+    replacement  = "info"
+  }
+}
+
+loki.source.file "fail2ban" {
+  targets    = local.file_match.fail2ban_log.targets
+  forward_to = [loki.relabel.fail2ban_file.receiver]
+}
+
+loki.process "normalize" {
+  forward_to = [loki.write.default.receiver]
+
+  // LOG-1 NDJSON (ops-panel and future sites)
+  stage.json {
+    expressions = {
+      level   = "level",
+      service = "service",
+      event   = "event",
+      msg     = "msg",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level   = "",
+      service = "",
+      event   = "",
+    }
+  }
+
+  // Traefik JSON access lines
+  stage.match {
+    selector = "{service=\"traefik\"}"
+
+    stage.json {
+      expressions = {
+        downstream_status = "DownstreamStatus",
+        request_method    = "RequestMethod",
+        request_path      = "RequestPath",
+        client_host       = "ClientHost",
+      }
+    }
+
+    stage.template {
+      source   = "output"
+      template = "{{ .request_method }} {{ .request_path }} status={{ .downstream_status }} client={{ .client_host }}"
+    }
+
+    stage.labels {
+      values = {
+        event = "http.access",
+        level = "info",
+      }
+    }
+
+    stage.match {
+      selector = "{downstream_status=~\"[45].*\"}"
+
+      stage.static_labels {
+        values = {
+          level = "error",
+        }
+      }
+    }
+  }
+}

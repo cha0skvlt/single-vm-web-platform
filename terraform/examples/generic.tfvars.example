@@ -1,0 +1,25 @@
+# Any OpenStack cloud. Copy to terraform/terraform.tfvars and fill every value.
+
+auth_url         = "https://identity.example.com:5000/v3"
+user_domain_name = "default"
+project_id       = ""
+tenant_name      = ""
+username         = ""
+password         = ""
+
+hostname = "web"
+region   = ""
+az       = ""
+
+image_name  = ""
+flavor_id   = ""
+volume_type = ""
+disk_size_gb = 100
+
+external_network_name = ""
+dns_nameservers       = ["1.1.1.1", "8.8.8.8"]
+subnet_cidr           = "192.168.0.0/24"
+ssh_port              = 22
+
+# Optional: allow a paired host to push logs to Loki.
+# peer_host_cidr = "203.0.113.10/32"

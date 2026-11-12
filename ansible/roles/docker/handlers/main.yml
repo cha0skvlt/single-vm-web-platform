@@ -1,0 +1,5 @@
+---
+- name: Apply docker-user chain
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/docker-user-isolation.sh
+  listen: Apply docker-user chain

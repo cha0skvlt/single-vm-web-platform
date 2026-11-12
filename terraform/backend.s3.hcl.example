@@ -1,0 +1,23 @@
+# Optional remote state (production). Not used by make bootstrap.
+#
+#   terraform -chdir=terraform init -backend-config=backend.s3.hcl
+#
+# Then add a backend "s3" block in a local backend.tf (not committed), or:
+#   terraform init -backend-config=backend.s3.hcl
+#
+# Example: S3-compatible API (Selectel / MinIO / AWS).
+
+bucket = "your-tfstate-bucket"
+key    = "web-platform/terraform.tfstate"
+region = "ru-3"
+
+endpoints = {
+  s3 = "https://s3.ru-3.storage.selcloud.ru"
+}
+
+use_lockfile                = true
+skip_region_validation      = true
+skip_credentials_validation = true
+skip_requesting_account_id  = true
+skip_s3_checksum            = true
+skip_metadata_api_check     = true

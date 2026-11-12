@@ -1,0 +1,5 @@
+# Per-domain TLS (file provider). Wildcards: scripts/deploy-wildcard-cert.sh
+tls:
+  certificates:
+    - certFile: /etc/traefik/dynamic/certs/{{ item }}/fullchain.pem
+      keyFile: /etc/traefik/dynamic/certs/{{ item }}/privkey.pem

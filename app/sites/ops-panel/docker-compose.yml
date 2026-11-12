@@ -1,0 +1,83 @@
+services:
+  ops-panel:
+    build: .
+    image: ops-panel:local
+    restart: unless-stopped
+    # Vars from app/.env via: docker compose --env-file .env -f sites/ops-panel/...
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+      LOGS_TAIL_BACKFILL: "300"
+      LOGS_POLL_INTERVAL: "2"
+      LOGS_LEVEL: "warn"
+      TRAEFIK_API: http://traefik:8080
+      TRAEFIK_PROBE_URL: http://traefik:80
+      SITE_PROBE_TIMEOUT: "3"
+      SITE_STATUS_TTL: "15"
+      TLS_WARN_DAYS: "30"
+      HEALTH_CHECK_PROMETHEUS: "1"
+      HEALTH_CHECK_SITES: "1"
+      HEALTH_CHECK_TLS: "1"
+      HEALTH_CHECK_GIT: "0"
+      PEER_PUBLIC_URL: ${PEER_PUBLIC_URL:-}
+      DIAGNOSTIC_HOURS: "2"
+      DIAGNOSTIC_MAX_MB: "32"
+      DIAGNOSTIC_MAX_INPUT_LINES: "2500"
+      DIAGNOSTIC_LOKI_LIMIT: "500"
+      DIAGNOSTIC_FULL: "0"
+      DIAGNOSTIC_TIMEOUT: "120"
+      DIAGNOSTIC_COOLDOWN: "30"
+      LOGS_STREAM_MAX_DURATION: "900"
+      FAIL2BAN_LOOKBACK_HOURS: "24"
+      PROJECT_HOSTNAME: ${PROJECT_HOSTNAME:-prod}
+      PROD_ADMIN_USER: ${PROD_ADMIN_USER}
+      PROD_ADMIN_PASSWORD: ${PROD_ADMIN_PASSWORD}
+      PROD_SESSION_SECRET: ${PROD_SESSION_SECRET:-}
+      PROD_PUBLIC_HOST: ${PROD_PUBLIC_HOST}
+    networks:
+      - platform
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /opt/${PROJECT_HOSTNAME:-prod}/app/certs:/opt/${PROJECT_HOSTNAME:-prod}/app/certs:ro
+      - /opt/${PROJECT_HOSTNAME:-prod}/scripts:/opt/${PROJECT_HOSTNAME:-prod}/scripts:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    labels:
+      - traefik.enable=true
+      - stack.site=ops-panel
+      - stack.role=app
+      - traefik.docker.network=platform
+      - traefik.http.routers.ops-panel.rule=Host(`${PROD_PUBLIC_HOST:-status.example.com}`)
+      - traefik.http.routers.ops-panel.service=ops-panel
+      - traefik.http.routers.ops-panel.entrypoints=websecure
+      - traefik.http.routers.ops-panel.tls=true
+      - traefik.http.routers.ops-panel.priority=10
+      - traefik.http.routers.ops-panel.middlewares=prod-headers@file
+      - traefik.http.services.ops-panel.loadbalancer.server.port=8080
+
+networks:
+  web:
+    external: true
+  platform:
+    external: true

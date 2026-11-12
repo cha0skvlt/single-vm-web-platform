@@ -1,0 +1,13 @@
+# CI-3 — secret scan allowlist (placeholders and public keys only).
+title = "single-vm-web-platform gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Committed env templates and deploy public keys"
+paths = [
+    '''app/\.env\.example$''',
+    '''app/\.env\.test\.example$''',
+    '''keys/deploy\.pub$''',
+]

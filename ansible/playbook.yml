@@ -1,0 +1,10 @@
+---
+# deploy@ssh_port from first boot (cloud-init). SSH keys only via cloud-init.
+- name: Web stack — base, docker, fail2ban, app
+  hosts: all
+  become: true
+  roles:
+    - base
+    - docker
+    - fail2ban
+    - app

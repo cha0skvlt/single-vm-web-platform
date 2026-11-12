@@ -1,0 +1,41 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "Ops helpers for single-vm-web-platform (Traefik, TLS, inventory, diagnostics)"
+authors = [{ name = "Eugene Grossbart / piniq.ai" }]
+license = { text = "PolyForm-Shield-1.0.0" }
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0,<10",
+  "PyYAML>=6.0",
+  "Jinja2>=3.1",
+]
+ansible = [
+  # ansible-core 2.20+ needs Python 3.12+; 2.15.x covers local 3.9–3.11 dev runs.
+  "ansible-core>=2.15.13,<2.16.0; python_version<'3.12'",
+  "ansible-core>=2.21.0,<2.22.0; python_version>='3.12'",
+]
+
+[project.scripts]
+ops = "scripts.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+cache_dir = ".venv/.pytest_cache"
+addopts = "-q --strict-markers"
+markers = [
+  "unit: fast isolated tests (scripts package)",
+  "service: static/compose/ansible/terraform/shell checks",
+]

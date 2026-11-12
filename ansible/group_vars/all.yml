@@ -1,0 +1,7 @@
+---
+# Server install root /opt/<hostname>/ — PROJECT_HOSTNAME from with-project-env.sh.
+hostname: "{{ lookup('env', 'PROJECT_HOSTNAME') | default('prod', true) }}"
+ssh_port: "{{ ansible_port | default(22) }}"
+admin_user: deploy
+# Host path for Traefik JSON access log (fail2ban jails read this file).
+traefik_access_log_path: "/var/log/{{ hostname }}/traefik/access.log"

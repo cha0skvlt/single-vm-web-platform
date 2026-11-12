@@ -1,0 +1,51 @@
+/privkey.pem
+# legacy; use app/.env only
+/.env
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform/plan.txt
+*.tfvars
+terraform/s3-backend.env
+crash.log
+.DS_Store
+.coverage
+.pytest_cache/
+.venv
+var/
+__pycache__/
+*.py[cod]
+*.pyc
+htmlcov/
+*.egg-info/
+dist/
+build/
+keys/deploy
+keys/ci_deploy
+ansible/inventory.ini
+ansible/.inventory.ci.tmp
+app/.env
+app/.env.test
+app/certs/**/*
+!app/certs/.gitkeep
+app/traefik/dynamic/*.yml
+certs-staging/
+ssl/
+example.com/
+app/sites/*/certs/
+
+# Personal task tracker (not part of the product)
+TODO.md
+
+# Cursor IDE (local rules; not part of the product)
+.cursor/
+
+# Fetched diagnostic bundles (make doctor --fetch)
+diagnostic-*.ndjson
+diagnostic-*.sha256
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+*~

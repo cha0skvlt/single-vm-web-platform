@@ -1,0 +1,30 @@
+/* Incidents — red only as a modest accent */
+
+.inc-row--error td:first-child {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--signal) 70%, transparent);
+}
+
+.inc-sev {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: lowercase;
+  white-space: nowrap;
+  width: 4.5rem;
+}
+
+.inc-sev--error {
+  color: var(--signal);
+}
+
+.inc-sev--warn {
+  color: var(--beacon-amber-core);
+}
+
+.inc-title {
+  color: var(--text-primary);
+}
+
+.inc-detail {
+  color: var(--text-secondary);
+  word-break: break-word;
+}

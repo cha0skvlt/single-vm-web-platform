@@ -1,0 +1,149 @@
+---
+- name: Install Docker prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Add Docker apt repository (distribution release)
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ ansible_facts['architecture'] | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}
+      signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/debian {{ docker_apt_codename }} stable
+    filename: docker
+    state: present
+
+- name: Refresh apt cache after Docker repo
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Check docker-ce availability for primary codename
+  ansible.builtin.command:
+    cmd: apt-cache madison docker-ce
+  register: docker_ce_madison
+  changed_when: false
+  failed_when: false
+
+- name: Fallback Docker apt repository to bookworm
+  when: docker_ce_madison.stdout | default('') | length == 0
+  block:
+    - name: Replace Docker apt repository with bookworm
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ ansible_facts['architecture'] | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/debian bookworm stable
+        filename: docker
+        state: present
+
+    - name: Refresh apt cache after bookworm fallback
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Record effective Docker apt codename (bookworm fallback)
+      ansible.builtin.set_fact:
+        docker_repo_codename_effective: bookworm
+
+- name: Record effective Docker apt codename (primary)
+  ansible.builtin.set_fact:
+    docker_repo_codename_effective: "{{ docker_apt_codename }}"
+  when: docker_ce_madison.stdout | default('') | length > 0
+
+- name: Install Docker Engine and Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: latest
+
+- name: Ensure Docker systemd drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: "0755"
+
+- name: Pin Docker daemon minimum API version (Traefik SDK sends 1.24)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/10-min-api.conf
+    mode: "0644"
+    content: |
+      [Service]
+      Environment=DOCKER_MIN_API_VERSION={{ docker_min_api_version }}
+  register: docker_min_api_dropin
+
+- name: Reload systemd and restart Docker for min API version
+  ansible.builtin.systemd:
+    name: docker
+    daemon_reload: true
+    state: restarted
+  when: docker_min_api_dropin.changed
+
+- name: Enable Docker Prometheus metrics on host port 9323
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    content: |
+      {
+        "metrics-addr": "0.0.0.0:9323"
+      }
+  register: docker_metrics_config
+
+- name: Restart Docker after metrics config change
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+  when: docker_metrics_config.changed
+
+- name: Enable and start Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Install DOCKER-USER isolation script
+  ansible.builtin.copy:
+    src: docker-user-isolation.sh
+    dest: /usr/local/sbin/docker-user-isolation.sh
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Apply docker-user chain
+
+- name: Install DOCKER-USER systemd unit
+  ansible.builtin.template:
+    src: docker-user-isolation.service.j2
+    dest: /etc/systemd/system/docker-user-isolation.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply docker-user chain
+
+- name: Enable DOCKER-USER isolation unit
+  ansible.builtin.systemd:
+    name: docker-user-isolation.service
+    enabled: true
+    daemon_reload: true
+    state: started
+
+- name: Report Docker apt codename used
+  ansible.builtin.debug:
+    msg: "Docker apt repository codename: {{ docker_repo_codename_effective }}"

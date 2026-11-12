@@ -1,0 +1,15 @@
+---
+# Full dist-upgrade only when explicitly requested (-e upgrade_packages=true).
+upgrade_packages: false
+
+# Host firewall mirrors cloud SG: SSH, HTTP, HTTPS.
+ufw_allowed_tcp_ports:
+  - "{{ ssh_port }}"
+  - "80"
+  - "443"
+
+# Optional: allow a paired host to push logs (Loki :3100). Empty = no extra rules.
+ufw_allowed_from_hosts: []
+
+# Host clock. Override in group_vars if the lab is not UTC.
+system_timezone: UTC

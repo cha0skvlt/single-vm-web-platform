@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<script src="/js/theme-boot.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>OPS BOARD</title>
+<meta name="theme-color" content="#0b0c0e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/panel-tokens.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/responsive.css">
+<link rel="stylesheet" href="/css/panel-grid.css">
+<link rel="stylesheet" href="/css/sites-table.css">
+<link rel="stylesheet" href="/css/fail2ban-table.css">
+<link rel="stylesheet" href="/css/incidents-table.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="logo" aria-label="OPS BOARD">
+    <img class="logo-mark" id="logo-mark" src="/img/mark.svg" width="99" height="42" alt="Ops panel" draggable="false">
+    <span class="logo-wordmark">
+      <span class="logo-wordmark-primary">OPS</span>
+      <span class="logo-wordmark-secondary">BOARD</span>
+    </span>
+  </div>
+  <div class="header-actions">
+    <div class="header-status" id="header-status">
+      <a class="btn btn-primary header-status-chip" id="status-prod-chip" href="/">
+        <span class="status-beacon status-beacon--stale header-status-orb" id="status-prod-orb" aria-hidden="true"></span>
+        Platform
+      </a>
+      <a class="btn btn-primary header-status-chip" id="status-git-chip" hidden href="#" rel="noopener noreferrer">
+        <span class="status-beacon status-beacon--stale header-status-orb" id="status-git-orb" aria-hidden="true"></span>
+        Peer
+      </a>
+    </div>
+    <div class="header-tools">
+      <button class="btn btn-header-tool btn-icon" type="button" id="theme-toggle-btn" aria-label="Toggle theme" title="Toggle theme">
+        <svg id="theme-icon" class="icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
+    <div class="header-actions-primary">
+      <form class="header-actions-primary" method="post" action="/diagnostic">
+        <button type="submit" class="btn btn-primary">Diagnostic</button>
+      </form>
+      <a class="btn btn-primary" href="/grafana/dashboards">Grafana</a>
+      <a class="btn btn-primary" href="/traefik/dashboard/">Traefik</a>
+      <a class="btn btn-primary" href="/pma/" target="_blank" rel="noopener noreferrer">phpMyAdmin</a>
+      <form class="header-logout-form" method="post" action="/logout">
+        <button type="submit" class="btn btn-primary">Sign out</button>
+      </form>
+    </div>
+  </div>
+</header>
+
+<div class="board-wrap" id="board-wrap">
+  <div class="monitor-board" id="monitor-board" aria-label="Monitoring grid"></div>
+</div>
+
+<script type="module" src="/js/panel/main.js"></script>
+</body>
+</html>

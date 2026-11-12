@@ -1,0 +1,17 @@
+---
+- name: Ensure Traefik access log file exists before fail2ban restart
+  ansible.builtin.file:
+    path: "{{ traefik_access_log_path }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+  listen: Restart fail2ban
+  when: fail2ban_traefik_auth_enabled | default(true) or fail2ban_traefik_scan_enabled | default(true)
+
+- name: Restart fail2ban service
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: restarted
+  listen: Restart fail2ban

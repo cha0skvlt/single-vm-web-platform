@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8082"]
+
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  - job_name: docker
+    static_configs:
+      - targets: ["host.docker.internal:9323"]
+
+  - job_name: mysqld-exporter
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+        labels:
+          site: shared
+          role: mysql
+
+  - job_name: site-exporters
+    docker_sd_configs:
+      - host: tcp://docker-socket-proxy:2375
+        refresh_interval: 30s
+        # Default true sorts networks A–Z and keeps only the first. Site
+        # exporters join web + <site>-internal; internal always wins, so
+        # keep-on-web dropped every target. Emit one target per network.
+        match_first_network: false
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_stack_scrape]
+        regex: "true"
+        action: keep
+      - source_labels: [__meta_docker_network_name]
+        regex: "^web$"
+        action: keep
+      - source_labels: [__meta_docker_network_ip, __meta_docker_container_label_stack_scrape_port]
+        separator: ":"
+        target_label: __address__
+      - source_labels: [__meta_docker_container_label_stack_site]
+        target_label: site
+      - source_labels: [__meta_docker_container_label_stack_role]
+        target_label: role
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: container_name

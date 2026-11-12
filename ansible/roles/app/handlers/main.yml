@@ -1,0 +1,29 @@
+---
+- name: Redeploy app stack
+  ansible.builtin.command:
+    cmd: docker compose --env-file .env up -d
+    chdir: "{{ app_install_dir }}"
+  become: true
+  register: app_stack_compose
+  changed_when: >-
+    app_stack_compose.rc == 0 and
+    ((app_stack_compose.stdout | default('')) + (app_stack_compose.stderr | default('')))
+    is search('(?i)(created|recreated|started|pulled|replaced)')
+
+# Bind-mounted prometheus.yml is not re-read until the process restarts.
+- name: Restart Prometheus after stack deploy
+  listen: "Redeploy app stack"
+  ansible.builtin.command:
+    cmd: docker compose --env-file .env restart prometheus
+    chdir: "{{ app_install_dir }}"
+  become: true
+  changed_when: true
+
+# Grafana reads dashboard provider.yml only at process start; bind-mount updates alone are not enough.
+- name: Restart Grafana after stack deploy
+  listen: "Redeploy app stack"
+  ansible.builtin.command:
+    cmd: docker compose --env-file .env restart grafana
+    chdir: "{{ app_install_dir }}"
+  become: true
+  changed_when: true

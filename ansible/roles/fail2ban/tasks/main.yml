@@ -1,0 +1,53 @@
+---
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: latest
+    update_cache: true
+
+- name: Install Traefik auth fail2ban filter
+  ansible.builtin.template:
+    src: traefik-auth.conf.j2
+    dest: /etc/fail2ban/filter.d/traefik-auth.conf
+    mode: "0644"
+  when: fail2ban_traefik_auth_enabled
+  notify: Restart fail2ban
+
+- name: Install Traefik scan fail2ban filter
+  ansible.builtin.template:
+    src: traefik-scan.conf.j2
+    dest: /etc/fail2ban/filter.d/traefik-scan.conf
+    mode: "0644"
+  when: fail2ban_traefik_scan_enabled
+  notify: Restart fail2ban
+
+- name: Configure fail2ban jails (sshd + Traefik)
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Ensure Traefik access log directory for fail2ban
+  ansible.builtin.file:
+    path: "{{ traefik_access_log_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: fail2ban_traefik_auth_enabled or fail2ban_traefik_scan_enabled
+
+- name: Ensure Traefik access log file exists for fail2ban
+  ansible.builtin.file:
+    path: "{{ traefik_access_log_path }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+  when: fail2ban_traefik_auth_enabled or fail2ban_traefik_scan_enabled
+
+- name: Enable and start fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started

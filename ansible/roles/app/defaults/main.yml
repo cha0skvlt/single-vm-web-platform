@@ -1,0 +1,21 @@
+---
+app_src: "{{ playbook_dir }}/../app"
+app_install_dir: "/opt/{{ hostname }}/app"
+ops_panel_build_hash_file: "/opt/{{ hostname }}/.ops-panel-build-hash"
+# Push app/.env to server: make deploy-ci / ansible -e app_env_push=true
+app_env_push: false
+# Server-local paths kept by rsync.
+app_rsync_excludes:
+  - --exclude=.env
+  - --exclude=certs/
+  - --exclude=**/__pycache__/
+  - --exclude=**/*.pyc
+  - --exclude=**/.build-hash
+scripts_rsync_excludes:
+  - --exclude=with-project-env.sh
+  - --exclude=_lib.sh
+  - --exclude=__pycache__/
+  - --exclude=**/*.pyc
+# traefik_tls_file_cert_domains — auto-discovered from {{ app_install_dir }}/certs before templating
+prod_public_host: status.example.com
+prod_admin_user: admin

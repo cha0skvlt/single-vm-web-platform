@@ -1,0 +1,89 @@
+:root {
+  /* Spacing — 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  /* Radii — sharp (max 6px) */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+
+  /* Typography */
+  --text-tag: 10px;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --line-height-tight: 1.45;
+  --line-height-body: 1.7;
+  --tracking-wide: 0.12em;
+  --tracking-wider: 0.14em;
+  --tracking-wordmark: 0.14em;
+
+  /* Motion */
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --size-tool: 32px;
+  --icon-stroke: 1.75;
+  --card-pad: var(--space-3);
+
+  /* Borders & elevation */
+  --border-hairline: 0.5px solid var(--hairline);
+  --border-pinned: 1px solid var(--edge-light);
+  --card-shadow-light: 0 1px 2px rgba(60, 50, 30, 0.12);
+}
+
+[data-theme="dark"] {
+  --bg: #0b0c0e;
+  --surface-header: #121316;
+  --surface-1: #121316;
+  --surface-2: #16181b;
+  --surface-3: #1b1d21;
+  --hairline: #26282c;
+  --edge-light: #34373d;
+  --text-primary: #e6e6e8;
+  --text-secondary: #9a9ca2;
+  --text-muted: #5d5f65;
+  --accent: #8b6fd6;
+  --accent-fg: #e6e6e8;
+  --accent-edge: #a98ee8;
+  --signal: #f05551;
+  --signal-edge: #5a2723;
+  --scrollbar-track: var(--surface-1);
+  --scrollbar-thumb: var(--surface-3);
+  --scrollbar-thumb-hover: var(--edge-light);
+}
+
+[data-theme="light"] {
+  --bg: #d4cebf;
+  --surface-header: #ccc6b6;
+  --surface-1: #d2cbb8;
+  --surface-2: #e3ddce;
+  --surface-3: #ece6d8;
+  --hairline: #bdb6a4;
+  --edge-light: #ebe5d6;
+  --text-primary: #3d3a34;
+  --text-secondary: #56524a;
+  --text-muted: #928c7d;
+  --accent: #45413a;
+  --accent-fg: #d4cebf;
+  --accent-edge: #5c5850;
+  --signal: #a8412f;
+  --signal-edge: #6e3028;
+  --border-pinned: 1px solid var(--hairline);
+  --scrollbar-track: var(--surface-1);
+  --scrollbar-thumb: var(--hairline);
+  --scrollbar-thumb-hover: var(--text-muted);
+}

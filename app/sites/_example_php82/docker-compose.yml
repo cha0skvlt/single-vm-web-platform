@@ -1,0 +1,86 @@
+services:
+  example-web:
+    image: nginx:1.27.5-alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../../../var/site-src/_example.local:/usr/share/nginx/html:ro
+    networks:
+      - web
+      - example-internal
+    depends_on:
+      - example-php
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - stack.site=example
+      - stack.role=nginx
+      - traefik.http.routers.example.rule=Host(`_example.local`)
+      - traefik.http.routers.example.entrypoints=websecure
+      - traefik.http.routers.example.tls=true
+      - traefik.http.routers.example.tls.certresolver=le
+      - traefik.http.services.example.loadbalancer.server.port=80
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  example-php:
+    build:
+      context: ./php
+    image: example-php:8.2
+    restart: unless-stopped
+    volumes:
+      - ../../../var/site-src/_example.local:/var/www/html
+    environment:
+      APP_ENV: production
+      APP_KEY: ${EXAMPLE_APP_KEY}
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: example
+      DB_USERNAME: example
+      DB_PASSWORD: ${EXAMPLE_DB_PASSWORD}
+    networks:
+      - example-internal
+      - db
+    labels:
+      - stack.site=example
+      - stack.role=php
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  example-nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.5.0
+    restart: unless-stopped
+    command:
+      - -nginx.scrape-uri=http://example-web:8080/stub_status
+    networks:
+      - web
+      - example-internal
+    depends_on:
+      - example-web
+    labels:
+      - stack.site=example
+      - stack.role=nginx-exporter
+      - stack.scrape=true
+      - stack.scrape_port=9113
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 64M
+
+networks:
+  web:
+    external: true
+  example-internal:
+    driver: bridge
+  db:
+    external: true

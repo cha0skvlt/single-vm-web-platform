@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Ops panel · Sign in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/tokens.css" />
+    <link rel="stylesheet" href="/css/login.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell" aria-labelledby="login-title">
+      <header class="login-brand" aria-label="Ops panel">
+        <img
+          class="login-logo"
+          src="/img/mark.svg"
+          width="133"
+          height="57"
+          alt=""
+          draggable="false"
+        />
+        <h1 id="login-title" class="login-title">Ops panel</h1>
+        <p class="login-sub">Sign in to continue</p>
+      </header>
+      <form class="login-card" method="post" action="/login" autocomplete="on">
+        <p id="login-error" class="login-error" hidden role="alert">Invalid username or password</p>
+        <label class="login-field">
+          <span class="login-label">Username</span>
+          <input
+            class="login-input"
+            type="text"
+            name="username"
+            required
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+          />
+        </label>
+        <label class="login-field">
+          <span class="login-label">Password</span>
+          <input
+            class="login-input"
+            type="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          />
+        </label>
+        <button type="submit" class="login-submit">Sign in</button>
+      </form>
+    </main>
+    <script src="/js/login.js"></script>
+  </body>
+</html>

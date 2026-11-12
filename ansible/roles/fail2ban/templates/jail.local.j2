@@ -1,0 +1,39 @@
+[DEFAULT]
+bantime = 1h
+findtime = 10m
+maxretry = 5
+banaction = ufw
+ignoreip = {{ fail2ban_ignoreip | join(' ') }}
+
+[sshd]
+enabled = true
+port = {{ ssh_port }}
+filter = sshd
+logpath = /var/log/auth.log
+backend = systemd
+maxretry = 5
+bantime = 1h
+
+{% if fail2ban_traefik_auth_enabled %}
+[traefik-auth]
+enabled = true
+port = http,https
+filter = traefik-auth
+logpath = {{ fail2ban_traefik_auth_logpath }}
+backend = auto
+maxretry = {{ fail2ban_traefik_auth_maxretry }}
+findtime = {{ fail2ban_traefik_auth_findtime }}
+bantime = {{ fail2ban_traefik_auth_bantime }}
+{% endif %}
+
+{% if fail2ban_traefik_scan_enabled %}
+[traefik-scan]
+enabled = true
+port = http,https
+filter = traefik-scan
+logpath = {{ fail2ban_traefik_scan_logpath }}
+backend = auto
+maxretry = {{ fail2ban_traefik_scan_maxretry }}
+findtime = {{ fail2ban_traefik_scan_findtime }}
+bantime = {{ fail2ban_traefik_scan_bantime }}
+{% endif %}

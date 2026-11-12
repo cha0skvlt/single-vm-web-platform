@@ -1,0 +1,30 @@
+# Selectel VPC (OpenStack). Copy to terraform/terraform.tfvars and fill secrets.
+#
+#   cp terraform/examples/selectel.tfvars.example terraform/terraform.tfvars
+#   make bootstrap
+
+auth_url         = "https://cloud.api.selcloud.ru/identity/v3"
+user_domain_name = "" # Selectel account ID
+project_id       = ""
+username         = ""
+password         = ""
+
+hostname = "web"
+region   = "ru-3"
+az       = "ru-3b"
+
+image_name  = "Debian 13 (Trixie) 64-bit"
+flavor_id   = "1054" # 4 vCPU / 8 GB — change to match your project
+volume_type = "universal2.ru-3b"
+disk_size_gb = 100
+
+# Leave empty to pick the sole external network.
+external_network_name = ""
+
+dns_nameservers = ["188.93.16.19", "188.93.17.19"]
+ssh_port        = 22
+
+volume_metadata = {
+  total_iops_sec  = "2000"
+  total_bytes_sec = "209715200"
+}

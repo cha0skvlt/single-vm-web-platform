@@ -1,0 +1,7 @@
+# Wildcard/purchased cert as default TLS store (file provider). No self-signed fallback.
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/dynamic/certs/{{ traefik_tls_default_domain }}/fullchain.pem
+        keyFile: /etc/traefik/dynamic/certs/{{ traefik_tls_default_domain }}/privkey.pem

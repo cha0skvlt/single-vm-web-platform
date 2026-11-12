@@ -1,0 +1,16 @@
+---
+fail2ban_ignoreip:
+  - 127.0.0.1/8
+  - "::1"
+
+fail2ban_traefik_auth_enabled: true
+fail2ban_traefik_auth_maxretry: 5
+fail2ban_traefik_auth_findtime: 600
+fail2ban_traefik_auth_bantime: 3600
+fail2ban_traefik_auth_logpath: "{{ traefik_access_log_path }}"
+
+fail2ban_traefik_scan_enabled: true
+fail2ban_traefik_scan_maxretry: 5
+fail2ban_traefik_scan_findtime: 600
+fail2ban_traefik_scan_bantime: 3600
+fail2ban_traefik_scan_logpath: "{{ traefik_access_log_path }}"

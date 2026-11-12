@@ -1,0 +1,16 @@
+[Unit]
+Description=DOCKER-USER isolation (optional Loki 3100, web admin ports)
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=PEER_LOKI_SOURCE_IP={{ peer_loki_source_ip | default('') }}
+Environment=DOCKER_WEB_NETWORK={{ docker_web_network_name }}
+Environment=DOCKER_USER_DROP_TCP_PORTS={{ docker_user_drop_tcp_ports | join(',') }}
+ExecStart=/usr/local/sbin/docker-user-isolation.sh
+
+[Install]
+WantedBy=multi-user.target docker.service

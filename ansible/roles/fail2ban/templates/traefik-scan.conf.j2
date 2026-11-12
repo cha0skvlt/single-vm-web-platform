@@ -1,0 +1,9 @@
+# Traefik JSON access logs — common vulnerability scan paths (.env, WordPress probes, etc.).
+# Reads Traefik accessLog.filePath (not Docker container logs).
+
+[Definition]
+
+# RequestPath field order varies; match ClientHost + probe path substring (lookaheads).
+failregex = ^\{.*"ClientHost":"<ADDR>"(?=.*"RequestPath":"[^"]*(?:\.env|wp-login|wp-admin|wp-includes|wordpress|xmlrpc|phpmyadmin|\.git|cgi-bin|vendor/phpunit|administrator|admin\.php)).*
+
+ignoreregex =

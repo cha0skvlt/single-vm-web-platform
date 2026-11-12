@@ -1,0 +1,72 @@
+/* status.example.com (SITE-1+) — panel tokens (import after tokens.css) */
+
+:root {
+  --line-hairline: 1px;
+
+  --grid-gap: var(--space-4);
+
+  --logo-mark-w: calc(var(--space-8) + var(--space-2));
+  --logo-mark-h: calc(var(--logo-mark-w) * 42 / 99);
+  --lamp-orb-size: var(--space-5);
+  --beacon-size: calc(var(--space-8) + var(--space-4));
+  --beacon-size-git: calc(var(--beacon-size) / 2);
+  --beacon-ok-core: #3a8f5c;
+  --beacon-ok-glow: rgba(80, 160, 110, 0.45);
+  --beacon-ok-glow-soft: rgba(60, 120, 85, 0.2);
+  --beacon-amber-core: #c9a227;
+  --beacon-amber-glow: rgba(201, 162, 39, 0.4);
+  --beacon-alarm-core: #ff2e1a;
+  --beacon-alarm-glow: rgba(255, 55, 30, 0.95);
+  --beacon-alarm-halo: rgba(255, 90, 40, 0.55);
+  --beacon-stale-core: var(--text-muted);
+}
+
+[data-theme="light"] {
+  --beacon-ok-core: #5a8a62;
+  --beacon-ok-glow: rgba(70, 110, 75, 0.35);
+  --beacon-ok-glow-soft: rgba(70, 110, 75, 0.15);
+  --beacon-amber-core: #9a7b18;
+  --beacon-amber-glow: rgba(154, 123, 24, 0.35);
+  --beacon-alarm-core: #c43828;
+  --beacon-alarm-glow: rgba(180, 50, 35, 0.75);
+  --beacon-alarm-halo: rgba(200, 80, 50, 0.4);
+}
+
+@keyframes beaconCalm {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+    filter: brightness(0.92);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.04);
+    filter: brightness(1.05);
+  }
+}
+
+@keyframes beaconSiren {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1.06);
+    filter: brightness(1.35) saturate(1.2);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(1.14);
+    filter: brightness(1.65) saturate(1.45);
+  }
+}
+
+@keyframes beaconFlicker {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.55;
+  }
+}

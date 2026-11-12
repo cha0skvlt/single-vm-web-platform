@@ -1,0 +1,14 @@
+---
+docker_apt_codename: "{{ ansible_facts['distribution_release'] }}"
+# Docker Engine 25+ raised the daemon's minimum negotiable API to 1.40, but the
+# Docker SDK bundled in Traefik v3 still requests 1.24 (and ignores DOCKER_API_VERSION),
+# so its provider gets zero containers. Restore acceptance of the legacy client API.
+docker_min_api_version: "1.24"
+
+# DOCKER-USER isolation (optional Loki :3100 allowlist + east-west admin ports).
+peer_loki_source_ip: ""
+docker_web_network_name: web
+docker_user_drop_tcp_ports:
+  - 8080
+  - 9090
+  - 9100

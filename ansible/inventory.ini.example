@@ -1,0 +1,3 @@
+# Group name = PROJECT_HOSTNAME; host alias "vm" avoids Ansible group/host name collision when group is [prod].
+[HOST]
+vm ansible_host=YOUR_PUBLIC_IP ansible_user=deploy ansible_port=22
